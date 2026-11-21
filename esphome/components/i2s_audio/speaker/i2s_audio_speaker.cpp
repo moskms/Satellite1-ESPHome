@@ -92,18 +92,22 @@ void I2SAudioSpeaker::dump_config() {
 void I2SAudioSpeaker::loop() {
   // Process deferred volume/mute changes in main loop to avoid I2C conflicts with I2S task
 #ifdef USE_AUDIO_DAC
-  if (this->audio_dac_ != nullptr) {
+  if (this->has_audio_dac_()) {
     if (this->has_pending_mute_) {
       this->has_pending_mute_ = false;
-      if (this->pending_mute_state_) {
-        this->audio_dac_->set_mute_on();
-      } else {
-        this->audio_dac_->set_mute_off();
+      for (auto *audio_dac : this->audio_dacs_) {
+        if (this->pending_mute_state_) {
+          audio_dac->set_mute_on();
+        } else {
+          audio_dac->set_mute_off();
+        }
       }
     }
     if (this->has_pending_volume_) {
       this->has_pending_volume_ = false;
-      this->audio_dac_->set_volume(this->pending_volume_);
+      for (auto *audio_dac : this->audio_dacs_) {
+        audio_dac->set_volume(this->pending_volume_);
+      }
     }
   }
 #endif
@@ -168,7 +172,7 @@ void I2SAudioSpeaker::loop() {
 void I2SAudioSpeaker::set_volume(float volume) {
   this->volume_ = volume;
 #ifdef USE_AUDIO_DAC
-  if (this->audio_dac_ != nullptr) {
+  if (this->has_audio_dac_()) {
     // Defer I2C operations to loop() to avoid conflicts with I2S speaker task
     this->pending_volume_ = volume;
     this->has_pending_volume_ = true;
@@ -184,7 +188,7 @@ void I2SAudioSpeaker::set_volume(float volume) {
 void I2SAudioSpeaker::set_mute_state(bool mute_state) {
   this->mute_state_ = mute_state;
 #ifdef USE_AUDIO_DAC
-  if (this->audio_dac_) {
+  if (this->has_audio_dac_()) {
     // Defer I2C operations to loop() to avoid conflicts with I2S speaker task
     this->pending_mute_state_ = mute_state;
     this->has_pending_mute_ = true;
